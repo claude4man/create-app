@@ -174,6 +174,8 @@ COPY package*.json ./
 COPY prisma ./prisma
 RUN npm install
 
+RUN npx prisma generate || true
+
 COPY . .
 RUN npm run build
 
@@ -184,6 +186,8 @@ WORKDIR /app
 COPY package*.json ./
 COPY prisma ./prisma
 RUN npm install --omit=dev
+
+RUN npx prisma generate || true
 
 COPY --from=builder /app/dist ./dist
 
