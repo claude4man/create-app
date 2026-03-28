@@ -335,8 +335,8 @@ model User {
   await fs.ensureDir(path.join(backendDir, 'prisma'));
   await fs.writeFile(path.join(backendDir, 'prisma', 'schema.prisma'), prismaSchema);
 
-  // Create prisma.config.ts for Prisma 7 datasource configuration
-  const prismaConfig = `export default {
+  // Create prisma.config.js for Prisma 7 datasource configuration
+  const prismaConfig = `module.exports = {
   datasources: {
     db: {
       url: process.env.DATABASE_URL,
