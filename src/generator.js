@@ -138,7 +138,6 @@ async function generateBackend(projectPath, answers, latestVersions = {}) {
       build: 'nest build',
       start: 'node dist/main',
       'db:migrate': 'npx prisma migrate deploy',
-      postinstall: 'prisma generate',
     },
     dependencies: {
       '@nestjs/common': latestVersions['@nestjs/common'] || '^10.0.0',
@@ -171,10 +170,10 @@ async function generateBackend(projectPath, answers, latestVersions = {}) {
 WORKDIR /app
 
 COPY package*.json ./
-RUN npm install --ignore-scripts
+COPY prisma ./prisma
+RUN npm install
 
 COPY . .
-RUN npx prisma generate
 RUN npm run build
 
 FROM node:20-alpine
@@ -182,10 +181,10 @@ FROM node:20-alpine
 WORKDIR /app
 
 COPY package*.json ./
-RUN npm install --omit=dev --ignore-scripts
+COPY prisma ./prisma
+RUN npm install --omit=dev
 
 COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/prisma ./prisma
 
 EXPOSE 3001
 
