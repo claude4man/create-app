@@ -1,0 +1,50 @@
+{
+  "name": "create-app",
+  "version": "1.0.0",
+  "description": "⚡ CLI для быстрого создания современных приложений с NestJS, Next.js, Docker и GitHub Actions",
+  "type": "module",
+  "bin": {
+    "create-app": "./index.js"
+  },
+  "preferGlobal": true,
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "author": "claude4man",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/claude4man/create-app.git"
+  },
+  "bugs": {
+    "url": "https://github.com/claude4man/create-app/issues"
+  },
+  "homepage": "https://github.com/claude4man/create-app#readme",
+  "keywords": [
+    "cli",
+    "create-app",
+    "generator",
+    "scaffold",
+    "nestjs",
+    "nextjs",
+    "docker",
+    "postgresql",
+    "github-actions",
+    "typescript"
+  ],
+  "files": [
+    "index.js",
+    "src/",
+    "LICENSE",
+    "README.md"
+  ],
+  "scripts": {
+    "test:create": "node -e \"console.log('Test: create-app command')\""
+  },
+  "dependencies": {
+    "inquirer": "^8.2.5",
+    "chalk": "^5.3.0",
+    "fs-extra": "^11.2.0",
+    "ora": "^8.0.0"
+  }
+}
