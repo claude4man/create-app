@@ -2,6 +2,7 @@ import fs from 'fs-extra';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { execSync } from 'child_process';
+import https from 'https';
 import { generateDockerCompose } from './templates/docker-compose.js';
 import { generatePackageJson } from './templates/package-json.js';
 import { generateGitHubActions } from './templates/github-actions.js';
@@ -673,6 +674,45 @@ ${answers.components.map((c) => `- ✅ ${c}`).join('\n')}
 - Prisma migrations run before Docker startup
 - Private repository
 
+## Dependencies & Package Management
+
+### Primary Information Source: Context7
+
+**Always check Context7 for versions and documentation before working with packages:**
+
+| Package | Context7 Link |
+| --- | --- |
+| Next.js | [context7.com/vercel/next.js](https://context7.com/vercel/next.js) |
+| NestJS | [context7.com/nestjs/docs.nestjs.com](https://context7.com/nestjs/docs.nestjs.com) |
+| Prisma | [context7.com/prisma/web](https://context7.com/prisma/web) |
+| MUI-X | [context7.com/mui/mui-x](https://context7.com/mui/mui-x) |
+| Claude Code | [context7.com/anthropics/claude-code](https://context7.com/anthropics/claude-code) |
+
+### Installation Workflow
+
+Before installing or updating ANY package:
+
+1. Check latest version: \`npx ctx7 skills search <package-name>\`
+2. Visit the Context7 link above for your package
+3. Review code examples and best practices
+4. Install with specific version: \`npm install <package>@<version>\`
+
+**Example:**
+
+\`\`\`bash
+npx ctx7 skills search prisma
+# → Check https://context7.com/prisma/web for latest version
+npm install prisma@<latest-version>
+\`\`\`
+
+### Why Context7?
+
+- Always up-to-date (updated within days)
+- High trust scores (8-10/10)
+- Includes code snippets and examples
+- Aggregates official documentation
+- Prevents using outdated/vulnerable versions
+
 ## Environment Variables
 
 Copy \`.env.example\` to \`.env.local\` and fill in your values.
@@ -750,4 +790,93 @@ NEXT_PUBLIC_ADMIN_URL=http://localhost:${adminPort}
   }
 
   await fs.writeFile(path.join(projectPath, '.env.example'), env);
+}
+
+function makeApiRequest(method, host, path, token, body = null) {
+  return new Promise((resolve, reject) => {
+    const options = {
+      hostname: host,
+      path: path,
+      method: method,
+      headers: {
+        'PRIVATE-TOKEN': token,
+        'Content-Type': 'application/json',
+      },
+    };
+
+    const req = https.request(options, (res) => {
+      let data = '';
+      res.on('data', (chunk) => {
+        data += chunk;
+      });
+      res.on('end', () => {
+        if (res.statusCode >= 200 && res.statusCode < 300) {
+          resolve(JSON.parse(data));
+        } else {
+          reject(new Error(`API Error: ${res.statusCode} - ${data}`));
+        }
+      });
+    });
+
+    req.on('error', (e) => reject(e));
+
+    if (body) {
+      req.write(JSON.stringify(body));
+    }
+    req.end();
+  });
+}
+
+export async function createRepository(answers) {
+  const projectPath = path.join(process.cwd(), answers.projectName);
+
+  // Initialize git first
+  execSync('git init', { cwd: projectPath, stdio: 'pipe' });
+  execSync('git config user.email "ai@eazyclaw.app"', { cwd: projectPath, stdio: 'pipe' });
+  execSync('git config user.name "AI Bot"', { cwd: projectPath, stdio: 'pipe' });
+
+  // Rename branch to main if it's master
+  try {
+    execSync('git branch -M main', { cwd: projectPath, stdio: 'pipe' });
+  } catch (e) {
+    // Ignore if main already exists
+  }
+
+  execSync('git add .', { cwd: projectPath, stdio: 'pipe' });
+  execSync('git commit -m "Initial commit"', { cwd: projectPath, stdio: 'pipe' });
+
+  if (answers.gitPlatform === 'GitLab') {
+    // Create GitLab repository via API
+    const repoData = {
+      name: answers.projectName,
+      visibility: 'private',
+      description: `${answers.projectName} - TikTok Template`,
+      issues_enabled: true,
+      wiki_enabled: false,
+    };
+
+    const repo = await makeApiRequest('POST', 'gitlab.com', '/api/v4/projects', answers.gitToken, repoData);
+
+    // Add remote and push
+    execSync(`git remote add origin ${repo.http_url_to_repo}`, { cwd: projectPath, stdio: 'pipe' });
+    execSync(`git push -u origin main`, {
+      cwd: projectPath,
+      stdio: 'pipe',
+      env: {
+        ...process.env,
+        GIT_ASKPASS: 'echo',
+        GIT_ASKPASS_RESULT: answers.gitToken,
+      },
+    });
+  } else if (answers.gitPlatform === 'GitHub') {
+    // Use GitHub CLI
+    execSync(`gh repo create ${answers.projectName} --private --source=. --remote origin --push`, {
+      cwd: projectPath,
+      stdio: 'pipe',
+      env: {
+        ...process.env,
+        GH_TOKEN: answers.gitToken,
+      },
+    });
+  }
 }

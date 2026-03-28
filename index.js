@@ -3,11 +3,26 @@
 import inquirer from 'inquirer';
 import chalk from 'chalk';
 import fs from 'fs-extra';
+import ora from 'ora';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { generateProject } from './src/generator.js';
+import { generateProject, createRepository } from './src/generator.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+function showManualRepoSteps(answers) {
+  const repoUrl =
+    answers.gitPlatform === 'GitHub'
+      ? `https://github.com/${answers.gitUser}/${answers.projectName}`
+      : `https://gitlab.com/${answers.gitUser}/${answers.projectName}`;
+
+  const command =
+    answers.gitPlatform === 'GitHub'
+      ? `gh repo create ${answers.projectName} --private --source=. --push`
+      : `# Create on ${answers.gitPlatform} UI, then:\ngit remote add origin ${repoUrl}.git\ngit push -u origin main`;
+
+  console.log(chalk.white(`  ${command}\n`));
+}
 
 async function main() {
   console.log(chalk.bold.cyan('\n🎬 Create App\n'));
@@ -57,10 +72,27 @@ async function main() {
       default: true,
     },
     {
+      type: 'list',
+      name: 'gitPlatform',
+      message: 'Choose platform for repository:',
+      choices: ['GitHub', 'GitLab'],
+      default: 'GitHub',
+    },
+    {
       type: 'input',
-      name: 'githubUser',
-      message: 'GitHub username?',
+      name: 'gitUser',
+      message: (answers) => {
+        return answers.gitPlatform === 'GitHub' ? 'GitHub username?' : 'GitLab username/group?';
+      },
       default: 'claude4man',
+    },
+    {
+      type: 'password',
+      name: 'gitToken',
+      message: (answers) => {
+        return answers.gitPlatform === 'GitHub' ? 'GitHub token (gh auth token)?' : 'GitLab token (Settings → Access Tokens)?';
+      },
+      mask: '*',
     },
   ]);
 
@@ -130,20 +162,29 @@ async function main() {
     await generateProject(answers, __dirname);
 
     console.log(chalk.bold.green('\n✅ Project created successfully!\n'));
-    console.log(chalk.cyan('Next steps:\n'));
+
+    const spinnerRepo = ora(chalk.cyan('Creating repository...')).start();
+    try {
+      await createRepository(answers);
+      spinnerRepo.succeed(chalk.green('✅ Repository created and pushed!'));
+    } catch (error) {
+      spinnerRepo.fail(chalk.red('Repository creation failed'));
+      console.log(chalk.yellow('\nYou can create the repository manually later:\n'));
+      showManualRepoSteps(answers);
+    }
+
+    console.log(chalk.cyan('\nNext steps:\n'));
     console.log(
       chalk.white(
         `  cd ${answers.projectName}\n` +
-        `  git init\n` +
-        `  git add .\n` +
-        `  git commit -m "Initial commit"\n` +
-        `  gh repo create ${answers.projectName} --private --source=. --push\n`
+        `  npm install\n` +
+        `  docker-compose up\n`
       )
     );
     console.log(chalk.yellow('\nDon\'t forget to:\n'));
     console.log(
       chalk.white(
-        '  1. Add GitHub Secrets (SSH_PRIVATE_KEY, VPS_HOST, VPS_USER)\n' +
+        '  1. Add CI/CD Secrets (SSH_PRIVATE_KEY, VPS_HOST, VPS_USER)\n' +
         '  2. Create server directories: /var/www/' +
         answers.projectName +
         '\n' +
