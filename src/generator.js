@@ -313,13 +313,14 @@ PORT=${backendPort}
 
   await fs.writeFile(path.join(backendDir, '.env'), envFile);
 
-  // Prisma schema
-  const prismaSchema = `datasource db {
-  provider = "postgresql"
+  // Prisma schema - Prisma 7 compatible
+  const prismaSchema = `generator client {
+  provider = "prisma-client-js"
 }
 
-generator client {
-  provider = "prisma-client-js"
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 model User {
@@ -333,20 +334,6 @@ model User {
 
   await fs.ensureDir(path.join(backendDir, 'prisma'));
   await fs.writeFile(path.join(backendDir, 'prisma', 'schema.prisma'), prismaSchema);
-
-  // Create prisma.config.ts for Prisma 7
-  const prismaConfig = `import { defineConfig } from '@prisma/internals';
-
-export default defineConfig({
-  datasources: {
-    db: {
-      url: process.env.DATABASE_URL,
-    },
-  },
-});
-`;
-
-  await fs.writeFile(path.join(backendDir, 'prisma.config.ts'), prismaConfig);
 
   // Create .prisma/.gitkeep
   await fs.ensureDir(path.join(backendDir, '.prisma'));
