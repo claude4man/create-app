@@ -283,6 +283,7 @@ export class PrismaService
       declarationMap: true,
       sourceMap: true,
     },
+    exclude: ['node_modules', 'dist', 'prisma.config.js'],
   };
 
   await fs.writeFile(
@@ -313,14 +314,13 @@ PORT=${backendPort}
 
   await fs.writeFile(path.join(backendDir, '.env'), envFile);
 
-  // Prisma schema - Prisma 7 compatible
+  // Prisma schema - Prisma 7 (datasource url moved to prisma.config.js)
   const prismaSchema = `generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 model User {
@@ -334,6 +334,18 @@ model User {
 
   await fs.ensureDir(path.join(backendDir, 'prisma'));
   await fs.writeFile(path.join(backendDir, 'prisma', 'schema.prisma'), prismaSchema);
+
+  // Create prisma.config.js for Prisma 7 datasource URL
+  const prismaConfig = `module.exports = {
+  datasources: {
+    db: {
+      url: process.env.DATABASE_URL,
+    },
+  },
+};
+`;
+
+  await fs.writeFile(path.join(backendDir, 'prisma.config.js'), prismaConfig);
 
   // Create .prisma/.gitkeep
   await fs.ensureDir(path.join(backendDir, '.prisma'));
