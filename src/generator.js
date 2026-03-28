@@ -249,17 +249,10 @@ export class PrismaModule {}
 import { PrismaClient } from '@prisma/client';
 
 @Injectable()
-export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
-  constructor() {
-    super({
-      datasources: {
-        db: {
-          url: process.env.DATABASE_URL,
-        },
-      },
-    });
-  }
-
+export class PrismaService
+  extends PrismaClient
+  implements OnModuleInit, OnModuleDestroy
+{
   async onModuleInit() {
     await this.$connect();
   }
@@ -340,6 +333,20 @@ model User {
 
   await fs.ensureDir(path.join(backendDir, 'prisma'));
   await fs.writeFile(path.join(backendDir, 'prisma', 'schema.prisma'), prismaSchema);
+
+  // Create prisma.config.ts for Prisma 7
+  const prismaConfig = `import { defineConfig } from '@prisma/internals';
+
+export default defineConfig({
+  datasources: {
+    db: {
+      url: process.env.DATABASE_URL,
+    },
+  },
+});
+`;
+
+  await fs.writeFile(path.join(backendDir, 'prisma.config.ts'), prismaConfig);
 
   // Create .prisma/.gitkeep
   await fs.ensureDir(path.join(backendDir, '.prisma'));
