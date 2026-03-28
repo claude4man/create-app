@@ -264,6 +264,7 @@ export class PrismaService
       module: 'commonjs',
       target: 'ES2021',
       lib: ['ES2021'],
+      types: ['node'],
       outDir: './dist',
       rootDir: './src',
       strict: true,
