@@ -15,7 +15,7 @@ export function generatePackageJson(answers) {
     {
       name: answers.projectName,
       version: '1.0.0',
-      description: 'TikTok Template Project',
+      description: `${answers.projectName} - TikTok Template`,
       private: true,
       scripts,
       workspaces: answers.components
