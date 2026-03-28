@@ -78,6 +78,14 @@ export async function generateProject(answers, cliDir) {
     await generateLanding(projectPath, answers, latestVersions);
   }
 
+  if (answers.components.includes('ios')) {
+    await generateIOS(projectPath, answers, latestVersions);
+  }
+
+  if (answers.components.includes('android')) {
+    await generateAndroid(projectPath, answers, latestVersions);
+  }
+
   // Generate Docker and CI/CD files
   const dockerCompose = generateDockerCompose(answers);
   await fs.writeFile(path.join(projectPath, 'docker-compose.yml'), dockerCompose);
@@ -646,6 +654,321 @@ CMD ["npm", "start"]
   await fs.writeFile(path.join(landingDir, 'Dockerfile'), dockerfile);
 
   await fs.ensureDir(path.join(landingDir, 'src', 'app'));
+}
+
+async function generateIOS(projectPath, answers, latestVersions = {}) {
+  const iosDir = path.join(projectPath, 'ios');
+  await fs.ensureDir(iosDir);
+
+  // Create Fastfile for fastlane
+  const fastlaneDir = path.join(iosDir, 'fastlane');
+  await fs.ensureDir(fastlaneDir);
+
+  const fastfile = `default_platform(:ios)
+
+platform :ios do
+  desc "Build the iOS app"
+  lane :build do
+    build_app(
+      workspace: "${answers.projectName}.xcworkspace",
+      scheme: "${answers.projectName}",
+      configuration: "Release",
+      derived_data_path: "build",
+      destination: "generic/platform=iOS",
+      export_method: "ad-hoc"
+    )
+  end
+
+  desc "Run tests"
+  lane :test do
+    run_tests(
+      workspace: "${answers.projectName}.xcworkspace",
+      scheme: "${answers.projectName}",
+      devices: ["iPhone 15"]
+    )
+  end
+
+  desc "Build and upload to TestFlight"
+  lane :beta do
+    build_app(
+      workspace: "${answers.projectName}.xcworkspace",
+      scheme: "${answers.projectName}",
+      export_method: "app-store"
+    )
+
+    upload_to_testflight(
+      skip_waiting_for_build_processing: true
+    )
+  end
+end
+`;
+
+  await fs.writeFile(path.join(fastlaneDir, 'Fastfile'), fastfile);
+
+  // Create Appfile for fastlane configuration
+  const appfile = `app_identifier "com.eazyclaw.${answers.projectName.replace(/-/g, '')}"
+apple_id "${answers.projectName}@eazyclaw.app"
+team_id "XXXXXXXXXX"  # Update with your Apple Team ID
+`;
+
+  await fs.writeFile(path.join(fastlaneDir, 'Appfile'), appfile);
+
+  // Create .gitignore for iOS
+  const gitignore = `# Xcode
+*.pbxproj
+*.xcodeproj/
+*.xcworkspace/
+build/
+DerivedData/
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# CocoaPods
+Pods/
+Podfile.lock
+
+# Fastlane
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/.env
+fastlane/.env.default
+
+# iOS / macOS
+.DS_Store
+*.swiftpm
+*.playground
+
+# Certificates and keys
+fastlane/certs
+fastlane/keychain.db
+`;
+
+  await fs.writeFile(path.join(iosDir, '.gitignore'), gitignore);
+
+  // Create README for iOS setup
+  const readme = `# iOS App - ${answers.projectName}
+
+## Setup
+
+### Prerequisites
+- Xcode 15+
+- CocoaPods
+- fastlane
+
+### Installation
+
+\`\`\`bash
+# Install CocoaPods dependencies
+pod install
+
+# Install fastlane
+sudo gem install fastlane
+\`\`\`
+
+## Development
+
+### Running the app
+1. Open \`${answers.projectName}.xcworkspace\` in Xcode
+2. Select target device/simulator
+3. Press Cmd+R to run
+
+## Fastlane Lanes
+
+### Build
+\`\`\`bash
+fastlane ios build
+\`\`\`
+
+### Run Tests
+\`\`\`bash
+fastlane ios test
+\`\`\`
+
+### Upload to TestFlight
+\`\`\`bash
+fastlane ios beta
+\`\`\`
+
+## Configuration
+
+### Before first build:
+1. Update \`fastlane/Appfile\` with:
+   - Your app bundle identifier
+   - Apple ID / Developer account email
+   - Team ID from Apple Developer account
+
+2. Set up certificates and provisioning profiles using fastlane match:
+\`\`\`bash
+fastlane match init
+fastlane match appstore
+\`\`\`
+
+## Notes
+- Default configuration uses App Store export method for TestFlight uploads
+- Build artifacts are stored in the \`build/\` directory
+- Ensure you have the proper Apple Developer account access
+`;
+
+  await fs.writeFile(path.join(iosDir, 'README.md'), readme);
+
+  // Create a basic src structure placeholder
+  await fs.ensureDir(path.join(iosDir, 'src'));
+  const srcReadme = `# iOS Source Code
+
+Place your Swift source code here after setting up the Xcode project.
+
+## Quick Setup
+
+1. Create new Xcode project:
+   \`\`\`bash
+   cd ios
+   open .
+   \`\`\`
+
+2. In Xcode, select File → New → Project
+3. Choose iOS → App
+4. Name: ${answers.projectName}
+5. Save in the \`ios\` folder
+
+Then set up CocoaPods:
+\`\`\`bash
+cd ios
+pod init
+# Edit Podfile with your dependencies
+pod install
+\`\`\`
+`;
+
+  await fs.writeFile(path.join(iosDir, 'src', 'README.md'), srcReadme);
+}
+
+async function generateAndroid(projectPath, answers, latestVersions = {}) {
+  const androidDir = path.join(projectPath, 'android');
+  await fs.ensureDir(androidDir);
+
+  // Create basic Android structure
+  const srcDir = path.join(androidDir, 'app', 'src', 'main');
+  await fs.ensureDir(srcDir);
+
+  // Create gradle files directory
+  const gradleDir = path.join(androidDir, 'gradle');
+  await fs.ensureDir(gradleDir);
+
+  // Create build.gradle.kts (root)
+  const rootBuildGradle = `plugins {
+    id("com.android.application") version "8.1.0" apply false
+    id("com.android.library") version "8.1.0" apply false
+    kotlin("android") version "1.9.0" apply false
+}
+
+task("clean") {
+    delete(rootProject.buildDir)
+}
+`;
+
+  await fs.writeFile(path.join(androidDir, 'build.gradle.kts'), rootBuildGradle);
+
+  // Create .gitignore for Android
+  const gitignore = `# Gradle
+.gradle/
+build/
+*.apk
+*.aar
+
+# Android Studio
+.idea/
+*.iml
+*.iws
+*.ipr
+local.properties
+
+# Kotlin
+*.kt
+
+# Misc
+.DS_Store
+`;
+
+  await fs.writeFile(path.join(androidDir, '.gitignore'), gitignore);
+
+  // Create README for Android setup
+  const readme = `# Android App - ${answers.projectName}
+
+## Setup
+
+### Prerequisites
+- Android Studio 2024.1 or higher
+- Java Development Kit (JDK) 17+
+- Android SDK 34+
+
+## Development
+
+### Opening the project
+1. Open Android Studio
+2. Select "Open an Existing Project"
+3. Select the \`android\` folder
+4. Wait for Gradle sync to complete
+
+### Running the app
+1. Select a device or create an emulator
+2. Click "Run 'app'" or press Shift+F10
+
+## Building
+
+### Debug APK
+\`\`\`bash
+./gradlew assembleDebug
+\`\`\`
+
+### Release APK
+\`\`\`bash
+./gradlew assembleRelease
+\`\`\`
+
+### Run Tests
+\`\`\`bash
+./gradlew test
+\`\`\`
+
+## Project Structure
+
+\`\`\`
+android/
+├── app/
+│   ├── src/
+│   │   ├── main/
+│   │   │   ├── kotlin/
+│   │   │   ├── java/
+│   │   │   └── AndroidManifest.xml
+│   │   ├── test/
+│   │   └── androidTest/
+│   └── build.gradle.kts
+├── gradle/
+├── build.gradle.kts
+└── settings.gradle.kts
+\`\`\`
+
+## Configuration
+
+Update \`local.properties\` with your local setup:
+\`\`\`properties
+sdk.dir=/path/to/Android/sdk
+\`\`\`
+
+## Notes
+- Ensure Android Studio is properly configured with SDK
+- API level 28+ is recommended for compatibility
+- Use \`./gradlew clean\` if you encounter build issues
+`;
+
+  await fs.writeFile(path.join(androidDir, 'README.md'), readme);
+
+  // Create app src directory structure
+  await fs.ensureDir(path.join(srcDir, 'kotlin', `com/eazyclaw/${answers.projectName.replace(/-/g, '')}`));
+  await fs.ensureDir(path.join(srcDir, 'res', 'layout'));
+  await fs.ensureDir(path.join(srcDir, 'res', 'values'));
 }
 
 async function generateCLAUDEmd(projectPath, answers) {
