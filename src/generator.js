@@ -410,7 +410,7 @@ module.exports = nextConfig
   // Create tsconfig.json
   const tsconfig = {
     compilerOptions: {
-      target: 'es5',
+      target: 'ES2020',
       lib: ['dom', 'dom.iterable', 'esnext'],
       jsx: 'preserve',
       module: 'esnext',
@@ -547,7 +547,7 @@ module.exports = nextConfig
   // Create tsconfig.json
   const tsconfig = {
     compilerOptions: {
-      target: 'es5',
+      target: 'ES2020',
       lib: ['dom', 'dom.iterable', 'esnext'],
       jsx: 'preserve',
       module: 'esnext',
