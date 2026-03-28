@@ -155,6 +155,7 @@ async function generateBackend(projectPath, answers, latestVersions = {}) {
       '@types/node': '^20.0.0',
       typescript: latestVersions['typescript'] || '^5.0.0',
       'ts-loader': '^9.0.0',
+      prisma: latestVersions['prisma'] || '^5.0.0',
     },
   };
 
