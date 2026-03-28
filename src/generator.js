@@ -138,6 +138,7 @@ async function generateBackend(projectPath, answers, latestVersions = {}) {
       build: 'nest build',
       start: 'node dist/main',
       'db:migrate': 'npx prisma migrate deploy',
+      postinstall: 'prisma generate',
     },
     dependencies: {
       '@nestjs/common': latestVersions['@nestjs/common'] || '^10.0.0',
